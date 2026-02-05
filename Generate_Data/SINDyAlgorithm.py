@@ -33,23 +33,30 @@ Theta = library(x, y, z)
 
 print(Theta.shape[1])  # Print the shape of the library matrix
 
-# Orindary Linear Regression to find the coefficients
 Xi = np.linalg.lstsq(Theta, dXdt, rcond=None)[0]
+threshold = 0.01
+max_iter = 10
 
-max_iteration = 10
+for iteration in range(max_iter):
+    Xi_old = Xi.copy()
+    
+    for i in range(Xi.shape[1]):  # loop over variables
+        active_indices = np.where(abs(Xi[:, i]) > threshold)[0]
+        if len(active_indices) == 0:
+            continue
+        
+        # Solve least squares only for active terms
+        Theta_active = Theta[:, active_indices]
+        Xi_active = np.linalg.lstsq(Theta_active, dXdt[:, i], rcond=None)[0]
+        
+        # Update Xi
+        Xi[:, i] = 0 # Reset all coefficients to zero before updating
+        Xi[active_indices, i] = Xi_active
+    
+    # Stop if converged
+    if np.allclose(Xi, Xi_old, atol=1e-6):
+        break
 
-for iteration in range(max_iteration):
-    for i in range(Xi.shape[1]):
-        for k in range(Xi.shape[0]):
-            if abs(Xi[k, i]) > 0.01:  # Threshold to consider as non-zero
-                Xi[k, i] = Xi[k, i]  # Keep significant coefficients
-                Theta[:, k] = Theta[:, k]  # Keep the corresponding term in the library
-            else:
-                Xi[k, i] = 0.0  # Set small coefficients to zero for sparsity
-                Theta[:, k] = 0.0  # Remove the corresponding term from the library
-
-    Xi = np.linalg.lstsq(Theta, dXdt, rcond=None)[0]
-
-
+print("Sparse Xi:")
 print(Xi)  
 
